@@ -1,0 +1,242 @@
+///Código no Google Earth Engine
+///evelyncastroporto@gmail.com
+///código utilizado para classificar série temporal Sentinel 2
+
+//HTML color codes: https://htmlcolorcodes.com/
+var slope_palette = ['0C7600','4CE500','B2FF18','FFFF00','FFAE00','ff6d66','FF0000'];
+
+//Display Reclassified slope image
+Map.addLayer(slope_RJ, {min:1, max:7, palette:slope_palette},'slope')
+
+//Area de estudos
+var locat= RJ_Norte
+Map.addLayer(RJ_Norte)
+
+var samples = amostras_merge
+print (samples)
+Map.addLayer(samples)
+
+//zoom to the image
+Map.centerObject(locat, 7);
+
+
+
+/////////////////////////Filtro de Nuvens///////////////////////////////////
+// Cloud masking function
+//var cloudMask = function(image) {
+//  var qa = image.select('QA60');
+//  var cloudBitMask = ee.Number(2).pow(10).int();
+//  var mask = qa.bitwiseAnd(cloudBitMask).eq(0);
+//  return image.updateMask(mask);
+//};
+
+
+// Apply cloud masking function to the image collection
+//var sentinel2_filtered = sentinel2_collection(cloudMask);
+
+////MASCARA DE NUVEM////////////////////////////////////////
+//var maskcloud = function(image) {
+//  var QA60 = image.select(['QA60']);
+//  var clouds = QA60.bitwiseAnd(1<<10).or(QA60.bitwiseAnd(1<<11))
+//  return image.updateMask(clouds.not()); 
+//};
+
+// Função para aplicar a máscara de nuvens a uma imagem
+var aplicarMascaraDeNuvens = function(imagem) {
+  var mascaraDeNuvens = imagem.select('QA60').not(); // A banda QA60 contém informações de nuvens
+  return imagem.updateMask(mascaraDeNuvens);
+};
+
+
+//////////////////////MASCARA DE SLOPE - DECLIVIDADE//////////////////
+var slope = function (image){
+  var mask = slope_RJ.lt(2);
+  //var mascara_slope = mask.bitwiseAnd(0<<5);
+  //return image.mascara_slope
+  //var filledImage = image.unmask(0); // Preenche os buracos com o valor padrão (neste exemplo, 0)
+  return image.updateMask(mask)//.not());
+};
+
+
+
+////////////////////// Composite //////////////////////////////////////////////////
+
+//Load the data that are defined by location and period. Add 1 year before and after the target year
+var sentinel2_collection = function(locat, start, end){
+    var col_1= ee.ImageCollection("COPERNICUS/S2_SR")
+          //.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50))
+           .filterBounds(locat)
+           .filterDate(start, end)
+           //.map(maskcloud)
+           .map(slope)
+           .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',40))
+            .map(aplicarMascaraDeNuvens)
+           .select(['B3','B8'],['green', 'NIR' ])
+            return col_1
+};
+
+
+///////////////////////////INDICES//////////////
+var indice= function(image,locat, start, end){
+ var ndwi_Mc =image.normalizedDifference(['green','NIR'])     
+             .multiply(10000).toShort()
+             .rename('ndwi_Mc');
+
+//var ndwi_Gao =image.normalizedDifference(['NIR','swir1'])     
+//             .multiply(10000).toShort()
+ //            .rename('ndwi_Gao');     
+              
+return image.addBands(ndwi_Mc).toShort() //.addBands(ndwi_Gao)
+};    
+
+
+// Function to calculate metrics
+var metrics =function(locat, start, end){
+var composite= sentinel2_collection(locat, start, end).map(indice).reduce(ee.Reducer.median())
+         //.addBands(sentinel2_collection(locat, start, end).reduce(ee.Reducer.median()))
+          .toShort()
+        return composite;
+}
+
+
+var paleta =  [
+'#080201', //Classe 1 = afloramento
+'#cddb2c', //Classe 2 = agricultura
+'#056bf2' , //Classe 3 = agua
+//'#e4e5f0',//Classe 4 = areia
+'#08330a',//Classe 5 = eucalipto
+'#1b7a1f', //Classe 6 = floresta
+'#7ff084', //Classe 7 = pastagem
+'#09e013',//Classe 8 = restinga
+'#e00909',//Classe 9 = urbano
+//'#0a0303',//Classe 10 = solo_exposto
+//'#7e4db3',//Classe 11 = wet_antropico
+//'#264f82',//Classe 12= wet_fluvial
+//'#268269',//Classe 13 = wet_mangue
+//'#52a88b',//Classe 14 = wet_pastagem
+//'#5ec6e6',//Classe 15 = wet_vegetacao
+//'#36bfcf',//Classe 16 = wetland
+  ];
+  
+
+  //**************DATAS***************
+  //**************2019****************
+//var janeiro = processMonth('2019-01-01', '2019-01-31', locat, samples, paleta);
+//var fevereiro = processMonth('2019-02-01', '2019-02-28', locat, samples, paleta);
+//var marco = processMonth('2019-03-01', '2019-03-31', locat, samples, paleta);
+//var abril = processMonth('2019-04-01', '2019-05-10', locat, samples, paleta);
+//var maio = processMonth('2019-05-01', '2019-05-31', locat, samples, paleta);
+//var junho = processMonth('2019-06-01', '2019-06-30', locat, samples, paleta); 
+//var julho = processMonth('2019-07-01', '2019-07-31', locat, samples, paleta); 
+//var agosto  = processMonth('2019-08-01', '2019-08-31', locat, samples, paleta); 
+//var setembro = processMonth('2019-09-01', '2019-09-30', locat, samples, paleta); 
+//var outubro = processMonth('2019-10-01', '2019-10-31', locat, samples, paleta); 
+////var novembro = processMonth('2019-11-01', '2019-11-30', locat, samples, paleta); 
+//var dezembro= processMonth('2019-12-01', '2019-12-31', locat, samples, paleta); 
+  
+  
+//**************2020****************
+//var janeiro = processMonth('2020-01-01', '2020-01-31', locat, samples, paleta);
+//var fevereiro = processMonth('2020-02-01', '2020-02-29', locat, samples, paleta);
+//var marco = processMonth('2020-03-01', '2020-03-31', locat, samples, paleta);
+//var abril = processMonth('2020-04-01', '2020-05-10', locat, samples, paleta);
+//var maio = processMonth('2020-05-01', '2020-05-31', locat, samples, paleta);
+//var junho = processMonth('2020-06-01', '2020-06-30', locat, samples, paleta); 
+//var julho = processMonth('2020-07-01', '2020-07-31', locat, samples, paleta); 
+//var agosto  = processMonth('2020-08-01', '2020-08-31', locat, samples, paleta); 
+//var setembro = processMonth('2020-09-01', '2020-09-30', locat, samples, paleta); 
+//var outubro = processMonth('2020-10-01', '2020-10-31', locat, samples, paleta); 
+//var novembro = processMonth('2020-11-01', '2020-11-30', locat, samples, paleta); 
+//var dezembro= processMonth('2020-12-01', '2020-12-31', locat, samples, paleta); 
+
+
+//**************2021****************
+var janeiro = processMonth('2021-01-01', '2021-01-31', locat, samples, paleta);
+var fevereiro = processMonth('2021-02-01', '2021-02-28', locat, samples, paleta);
+var marco = processMonth('2021-03-01', '2021-03-31', locat, samples, paleta);
+var abril = processMonth('2021-04-01', '2021-05-10', locat, samples, paleta);
+var maio = processMonth('2021-05-01', '2021-05-31', locat, samples, paleta);
+var junho = processMonth('2021-06-01', '2021-06-30', locat, samples, paleta); 
+var julho = processMonth('2021-07-01', '2021-07-31', locat, samples, paleta); 
+var agosto  = processMonth('2021-08-01', '2021-08-31', locat, samples, paleta); 
+var setembro = processMonth('2021-09-01', '2021-09-30', locat, samples, paleta); 
+var outubro = processMonth('2021-10-01', '2021-10-31', locat, samples, paleta); 
+var novembro = processMonth('2021-11-01', '2021-11-30', locat, samples, paleta); 
+var dezembro= processMonth('2021-12-01', '2021-12-31', locat, samples, paleta); 
+
+
+function processMonth(start_date, end_date, locat, samples, palette) {
+  // Obtém o nome do mês
+  var metricResult = metrics(locat, start_date, end_date);
+  var training = metricResult.sampleRegions({
+    collection: samples,
+    properties: ['Binario'],
+    scale: 10,
+    tileScale: 16,
+   });
+  
+  var month = ee.Date(start_date).format('MMMM').getInfo();
+  print(metricResult, 'metricas ' + month);
+
+ 
+
+//***********************Aplicação de Redutor*****************************
+  training = training.randomColumn();
+  var classificador = ee.Classifier.smileRandomForest(500).train({
+    features: training,
+    classProperty: 'Binario',
+    inputProperties: metricResult.bandNames()
+  });
+  
+  
+var geet = require('users/elacerda/geet:geet');
+var classificado = metricResult.classify(classificador);
+var classProb50_locat = classificado.clip(locat).round().toUint8().where(classificado.clip(locat).round().toUint8().eq(0), ee.Image.constant(2));
+
+
+// Reclassificar Classe 2 (outros) como Classe 0 = BINÁRIO (0-1)
+classProb50_locat = classProb50_locat.where(classProb50_locat.eq(2), 0);
+
+
+
+// Criar uma máscara para os pixels classificados como buracos (masked)
+var holesMask = classProb50_locat.eq(2);
+
+// Reclassificar os buracos como classe 0 sem afetar outras áreas
+var reclassified = classProb50_locat.unmask().where(holesMask, 0);
+var reclassified_clip = reclassified.clip(locat)
+
+
+
+ // Creating customized visualization for the classification
+var vis_clas = {
+  min: 0, //CLASSE OUTROS
+  max: 1, /// CLASSE WETLAND
+  palette: ['#ffffff','#140dd6'] 
+};
+ 
+////BINÁRIO = 0 - OUTROS E 1 - WETLAND
+
+//VISUALIZAR 
+Map.addLayer(reclassified_clip, vis_clas, 'S2_2020_NDWI_slope_'+month, false)
+
+//var mascara = reclassified_clip.reduce(ee.Reducer.max()).eq(1);
+//Map.addLayer(mascara.selfMask(), {palette: ['blue']}, 'mask_'+month, false);
+
+//MAJORITY
+var majority = geet.majority(reclassified_clip, 2);
+Map.addLayer(majority, vis_clas, 'S2_2020_NDWI_slope_majority_'+month, false)
+
+//var mask_majority = majority.reduce(ee.Reducer.max()).eq(1);
+//Map.addLayer(mask_majority.selfMask(), {palette: ['blue']}, 'mask_majority_'+month, false);
+
+//EXPORTAR CLASSIFICAÇAO
+  Export.image.toDrive({
+    image: reclassified_clip,
+    description: 'Sentinel2_NDWI_slope_2021_Norte' + month,
+    folder: 'GEE',
+    scale: 10,
+    region: locat,
+    maxPixels: 1e13
+ });
+}
