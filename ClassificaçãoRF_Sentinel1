@@ -1,0 +1,212 @@
+/////AREA DE ESTUDOS
+var area_estudo = RJ_EV
+var locat = RJ_EV
+Map.addLayer(RJ_EV, {}, 'area_estudo', false)
+
+/////SLOPE
+
+Map.addLayer(slope_RJ, {},'slope')
+Map.addLayer(RJ_roi, {},'RJ')
+
+///////////////////////carregar as amostras
+var amostras_merge = ee.FeatureCollection("users/evelyncastroporto/Amostras/Amostras_agua_naoagua_semwet_areia_solo"); 
+print(amostras_merge);
+
+//////////////////////MASCARA DE SLOPE - DECLIVIDADE//////////////////
+var slope = function (image){
+  var mask = slope_MK.lt(1);
+  //var mascara_slope = mask.bitwiseAnd(0<<5);
+  //return image.mascara_slope
+  //var filledImage = image.unmask(0); // Preenche os buracos com o valor padrão (neste exemplo, 0)
+  return image.updateMask(mask)//.not());
+};
+
+//***************************visualizar - sentinel 1********************//
+var sentinel1 = ee.ImageCollection("COPERNICUS/S1_GRD")
+  .filter(ee.Filter.eq ('instrumentMode' , 'IW'))
+  .filter (ee.Filter.eq ('orbitProperties_pass','DESCENDING'))
+  .filterMetadata('resolution_meters', 'equals', 10)
+  .filterBounds(area_estudo)
+  .filterDate('2021-01-01','2021-01-31')
+  .select ('VH','VV')
+  //.first ()
+Map.addLayer(sentinel1, {min: -30, max: 0}, 'Sentinel1');
+  
+//***************************visualizar - sentinel 1 com filtro lee********************//
+var sentinel1_filter = ee.ImageCollection("COPERNICUS/S1_GRD")
+  .filter(ee.Filter.eq ('instrumentMode' , 'IW'))
+  .filter (ee.Filter.eq ('orbitProperties_pass','DESCENDING'))
+  .filterMetadata('resolution_meters', 'equals', 10)
+  .filterBounds(area_estudo)
+  .filterDate('2021-01-01','2021-01-31')
+  .select ('VV', 'VH')
+  //.map(slope)
+  var applyLeeFilter = function(image) {
+  var filtered = image.focal_median({
+    radius: 3,
+    units: 'pixels',
+    kernelType: 'square',
+    iterations:3
+  });
+  return filtered;
+};
+
+var sentinel1_filtered = sentinel1_filter.map(applyLeeFilter);
+Map.addLayer(sentinel1_filtered, {min: -30, max: 0}, 'Sentinel1_filtroLee');
+
+//*******************COLEÇÃO DE IMAGEM SENTINEL 1*************************************
+var filterCollection = function(locat, start, end){
+var col_1 = ee.ImageCollection("COPERNICUS/S1_GRD")
+  .filter(ee.Filter.eq ('instrumentMode' , 'IW'))
+  .filter (ee.Filter.eq ('orbitProperties_pass','DESCENDING'))
+  .filterMetadata('resolution_meters', 'equals', 10)
+  .filterBounds(locat)
+  .filterDate(start, end)
+  .select ('VH','VV')
+  .map(function(image) {     //incluir filtro lee
+      var filtered = image.focal_median({kernelType: 'square', units: 'pixels', radius: 3, iterations: 3});
+      return filtered;
+    });
+  return col_1;
+};
+
+//var slope = ('projects/ee-evelyncosta/assets/Reclassified_Slope_recorte')
+//var slope = ('users/evelyncastroporto/slope/Slope_Reclassificado_classes_RJ_0-7')
+
+//Map.addLayer(slope)
+
+///////////////////METRICAS///////////////////
+var metrics = function filteredCollection(locat, start, end){
+      var composite = filterCollection(locat, start, end).reduce(ee.Reducer.median())
+          //.addBands(filterCollection(locat, start, end).reduce(ee.Reducer.mean()))
+          //.addBands(filterCollection(locat, start, end).reduce(ee.Reducer.stdDev()))
+          //.addBands(filterCollection(locat, start, end).reduce(ee.Reducer.percentile([5,10,30,70,90,98])))
+          //.addBands(slope)
+          .toShort()
+
+return composite;
+};
+
+
+var bands = ['VH', 'VV']
+var classe = 'amostras'
+
+var paleta =  [
+'#080201', //Classe 1 = afloramento
+'#cddb2c', //Classe 2 = agricultura
+'#056bf2' , //Classe 3 = agua
+//'#e4e5f0',//Classe 4 = areia
+'#08330a',//Classe 5 = eucalipto
+'#1b7a1f', //Classe 6 = floresta
+'#7ff084', //Classe 7 = pastagem
+'#09e013',//Classe 8 = restinga
+'#e00909',//Classe 9 = urbano
+//'#0a0303',//Classe 10 = solo_exposto
+//'#7e4db3',//Classe 11 = wet_antropico
+//'#264f82',//Classe 12= wet_fluvial
+//'#268269',//Classe 13 = wet_mangue
+//'#52a88b',//Classe 14 = wet_pastagem
+//'#5ec6e6',//Classe 15 = wet_vegetacao
+//'#36bfcf',//Classe 16 = wetland
+  ];
+  
+  
+ var vis_clas = {
+  min: 1,
+  max: 0,
+  palette: ['#140dd6', '#ffffff'] 
+};
+ 
+  //**************DATAS***************
+
+ 
+    //***********************2019***********************
+//processMonth('2019-01-01', '2019-01-31', area_estudo, amostras_merge, paleta);
+//processMonth('2019-02-01', '2019-02-28', area_estudo, amostras_merge, paleta);
+//processMonth('2019-03-01', '2019-03-31', area_estudo, amostras_merge, paleta);
+//processMonth('2019-04-01', '2019-04-30', area_estudo, amostras_merge, paleta);
+//processMonth('2019-05-01', '2019-05-31', area_estudo, amostras_merge, paleta);
+//processMonth('2019-06-01', '2019-06-30', area_estudo, amostras_merge, paleta);
+//processMonth('2019-07-01', '2019-07-31', area_estudo, amostras_merge, paleta);
+//processMonth('2019-08-01', '2019-08-31', area_estudo, amostras_merge, paleta);
+//processMonth('2019-09-01', '2019-09-30', area_estudo, amostras_merge, paleta);
+//processMonth('2019-10-01', '2019-10-31', area_estudo, amostras_merge, paleta);
+//processMonth('2019-11-01', '2019-11-30', area_estudo, amostras_merge, paleta);
+//processMonth('2019-12-01', '2019-12-31', area_estudo, amostras_merge, paleta);
+
+  
+   //***********************2020***********************
+processMonth('2020-01-01', '2020-01-31', area_estudo, amostras_merge, paleta);
+processMonth('2020-02-01', '2020-02-29', area_estudo, amostras_merge, paleta);
+processMonth('2020-03-01', '2020-03-31', area_estudo, amostras_merge, paleta);
+processMonth('2020-04-01', '2020-04-30', area_estudo, amostras_merge, paleta);
+processMonth('2020-05-01', '2020-05-31', area_estudo, amostras_merge, paleta);
+processMonth('2020-06-01', '2020-06-30', area_estudo, amostras_merge, paleta);
+processMonth('2020-07-01', '2020-07-31', area_estudo, amostras_merge, paleta);
+processMonth('2020-08-01', '2020-08-31', area_estudo, amostras_merge, paleta);
+processMonth('2020-09-01', '2020-09-30', area_estudo, amostras_merge, paleta);
+processMonth('2020-10-01', '2020-10-31', area_estudo, amostras_merge, paleta);
+processMonth('2020-11-01', '2020-11-30', area_estudo, amostras_merge, paleta);
+processMonth('2020-12-01', '2020-12-31', area_estudo, amostras_merge, paleta);
+
+  //***********************2021***********************
+//processMonth('2021-01-01', '2021-01-31', area_estudo, amostras_merge, paleta);
+//processMonth('2021-02-01', '2021-02-28', area_estudo, amostras_merge, paleta);
+//processMonth('2021-03-01', '2021-03-31', area_estudo, amostras_merge, paleta);
+//processMonth('2021-04-01', '2021-04-30', area_estudo, amostras_merge, paleta);
+//processMonth('2021-05-01', '2021-05-31', area_estudo, amostras_merge, paleta);
+//processMonth('2021-06-01', '2021-06-30', area_estudo, amostras_merge, paleta);
+//processMonth('2021-07-01', '2021-07-31', area_estudo, amostras_merge, paleta);
+//processMonth('2021-08-01', '2021-08-31', area_estudo, amostras_merge, paleta);
+//processMonth('2021-09-01', '2021-09-30', area_estudo, amostras_merge, paleta);
+//processMonth('2021-10-01', '2021-10-31', area_estudo, amostras_merge, paleta);
+//processMonth('2021-11-01', '2021-11-30', area_estudo, amostras_merge, paleta);
+//processMonth('2021-12-01', '2021-12-31', area_estudo, amostras_merge, paleta);
+
+  
+//***********************Aplicação de Redutor*****************************
+function processMonth(start_date, end_date, area_estudo, amostras_merge, palette) {
+  var metricResult = metrics(area_estudo, start_date, end_date);
+  var training = metricResult.sampleRegions({
+    collection: amostras_merge,
+    properties: ['ID'],
+    scale: 10,
+    tileScale: 16,
+  });
+  
+var month = ee.Date(start_date).format('MMMM').getInfo();
+print(metricResult, 'metricas ' + month);
+
+
+  training = training.randomColumn();
+  var classificador = ee.Classifier.smileRandomForest(500).train({
+    features: training,
+    classProperty: 'ID',
+    inputProperties: metricResult.bandNames()
+  });
+  
+  var geet = require('users/elacerda/geet:geet');
+  var classificado = metricResult.classify(classificador);
+  //Map.addLayer(classificado, vis_clas, 'teste')
+   var classProb50_locat = classificado.clip(area_estudo).round().toUint8().where(classificado.clip(area_estudo).round().toUint8().eq(0), ee.Image.constant(2));
+  //var majority = geet.majority(classProb50_locat, 2);
+  var mascara = classProb50_locat.reduce(ee.Reducer.max()).eq(3);
+  Map.addLayer(mascara, vis_clas, 'agua_'+month, false )
+  Map.addLayer(mascara.selfMask(), {palette: ['blue']}, 'mascara_agua_'+month, false);
+ 
+ 
+ //EXPORT
+  Export.image.toDrive({
+    image: mascara,
+    description: 'Sentinel1_Agua_2019_RJ_Verde' + month,
+    folder: 'GEE',
+    scale: 10,
+   // region: RJ_Norte,
+    //region: RJ_Lagos,
+    //region: RJ_RMRJ,
+    region: RJ_Verde,
+    maxPixels: 1e13
+  });
+}
+
+ 
