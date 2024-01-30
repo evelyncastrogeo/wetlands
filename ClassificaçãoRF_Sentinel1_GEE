@@ -1,3 +1,7 @@
+///Código no Google Earth Engine
+///evelyncastroporto@gmail.com
+///código utilizado para classificar série temporal Sentinel 1 (radar)
+
 /////AREA DE ESTUDOS
 var area_estudo = RJ_EV
 var locat = RJ_EV
