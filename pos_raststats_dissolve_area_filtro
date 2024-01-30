@@ -1,4 +1,4 @@
-#software R
+#software Rstudio
 #evelyncastroporto@gmail.com
 #Código utilizado após processamento "RastStats" no qgis
 #O código realiza uma selação por atributos (definindo colunas e atributos específicos) e exporta o shp
