@@ -1,0 +1,86 @@
+#Softaware Rstudio
+#evelyncastroporto@gmail.com
+#Código utilizado para somar shape e raster, salvando os dados em raster e em uma pasta específica 
+## Processamento realizado em looping
+
+#instalação
+install.packages("raster")
+install.packages("sf")
+library(raster)
+library(sf)
+
+# Função para dissolver o shapefile pela coluna especificada
+dissolver_shapefile <- function(shapefile_path, dissolve_column) {
+  # Carregar o shapefile
+  shape_data <- st_read(shapefile_path)
+  
+  # Dissolver pela coluna especificada
+  dissolved_shape <- st_union(shape_data$geometry)
+  
+  # Criar um novo data frame sf com a geometria dissolvida
+  dissolved_sf <- st_sf(data.frame(geometry = dissolved_shape))
+  
+  return(dissolved_sf)
+}
+
+# Função para processar uma subpasta
+processar_subpasta <- function(pasta) {
+  # Listar os arquivos na pasta
+  arquivos <- list.files(pasta)
+  
+  # Filtrar o raster pelo formato desejado (extensão .tif)
+  raster_file <- arquivos[grep(".tif$", arquivos, ignore.case = TRUE)]
+  
+  # Filtrar o shapefile pelo formato desejado (extensão .shp)
+  shapefile <- arquivos[grep(".shp$", arquivos, ignore.case = TRUE)]
+  
+  # Verificar se existe apenas um raster e um shapefile na pasta
+  if (length(raster_file) != 1 || length(shapefile) != 1) {
+    cat("A pasta", pasta, "deve conter apenas um raster (.tif) e um shapefile (.shp).\n")
+    return() # Retornar se não estiverem presentes os arquivos esperados
+  }
+  
+  # Caminhos completos para o raster e o shapefile
+  raster_file <- file.path(pasta, raster_file)
+  shapefile <- file.path(pasta, shapefile)
+  
+  # Dissolver o shapefile pela coluna "Clss_md"
+  dissolved_shape <- dissolver_shapefile(shapefile, "Clss_md")
+  
+  # Carregar o raster
+  raster_data <- raster(raster_file)
+  
+  # Converter o shapefile dissolvido em raster com a mesma extensão e resolução do raster original
+  shape_raster <- rasterize(dissolved_shape, raster_data, field = 1)
+  
+  # Criar um novo raster com os valores do raster original
+  raster_result <- raster_data
+  
+  # Atualizar os valores do raster resultante com os valores do shapefile onde o shapefile é 1
+  raster_result[shape_raster == 1] <- 1
+  
+  # Salvar o raster resultante em um novo arquivo em uma pasta diferente
+  output_folder <- "G:/Meu Drive/GEE/RF_SENTINEL_1A_2AB_RJ/Classificação_RF_GEE/soma"
+  
+  output_file <- file.path(output_folder, paste0("soma_", basename(shapefile)))
+  writeRaster(raster_result, output_file, format = "GTiff", overwrite = TRUE)
+  
+  # Imprimir mensagem de conclusão
+  cat("Processamento concluído para a pasta", pasta, "\n")
+}
+
+# Definir o caminho da pasta raiz que contém as subpastas
+pasta_raiz <- "G:/Meu Drive/GEE/RF_SENTINEL_1A_2AB_RJ/Classificação_RF_GEE/2019/Verde_2019/selecionado"
+
+# Lista de subpastas
+subpastas <- c("1", "2", "3","4","5","6","7","8","9","10","11","12") # Adicione aqui as subpastas que deseja percorrer
+
+# Loop através das subpastas
+for (subpasta in subpastas) {
+  # Caminho completo para a subpasta
+  pasta <- file.path(pasta_raiz, subpasta)
+  
+  # Processar a subpasta
+  processar_subpasta(pasta)
+}
+
