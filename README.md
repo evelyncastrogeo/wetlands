@@ -8,3 +8,5 @@ Shapefiles
 Mapas temáticos (jpeg e PDF)
 
 Como citar: 
+COSTA, Evelyn de Castro Porto. Wetlands do estado do Rio de Janeiro: identificação, classificação e estado ambiental das paisagens pantanosas. 2025. 177 f. Tese (Doutorado em Geografia) - Programa de Pós-Graduação em Geografia, Instituto de Geociências, Universidade Federal Fluminense, Niterói, 2025.
+
