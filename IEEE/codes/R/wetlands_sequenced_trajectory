@@ -1,0 +1,68 @@
+##software Rstudio
+##evelyncastroporto@gmail.com
+##tese wetlands UFF/geografia
+##codigo usado para sequenciar repetições contínuas em uma classificação temporal
+
+##intalação
+install.packages("raster", "rasterVis")
+library(raster)
+library(rasterVis)
+
+# Load the raster stack (replace "your_stack.tif" with the actual file name)
+stack_path <- "G:/Meu Drive/GEE/RF_SENTINEL_1A_2AB_RJ/Classificação_RF_GEE/soma/pilhastack_Verde_36meses-19-20-21.tif"
+stack <- brick(stack_path)
+selected_bands <- 1:36
+stack_subset <- stack[[selected_bands]]
+
+# Function to classify the sequences in the 36-month stack
+classificar_sequencias <- function(x) {
+  max_sequence_length <- 0
+  current_sequence_length <- 0
+  for (i in 1:length(x)) {
+    if (x[i] == 1) {
+      current_sequence_length <- current_sequence_length + 1
+      max_sequence_length <- max(max_sequence_length, current_sequence_length)
+    } else {
+      current_sequence_length <- 0
+    }
+  }
+  if (max_sequence_length == 36) {
+    return(6)  # corpo d'agua
+  } else if (max_sequence_length >= 12 & max_sequence_length <= 35) {
+    return(5)  # permanente
+  } else if (max_sequence_length >= 10 & max_sequence_length <= 11) {
+    return(4)  # temporario
+  } else if (max_sequence_length >= 7 & max_sequence_length <= 9) {
+    return(3)  # sazonal
+  } else if (max_sequence_length >= 4 & max_sequence_length <= 6) {
+    return(2)  # ocasional
+  } else if (max_sequence_length >= 3 ) {
+    return(1)  # raro
+  } else {
+    return(0)  # outros
+  }
+}
+
+
+# Apply the function to the stack of 36 sequential months using calc
+classified_stack <- calc(stack_subset, fun = classificar_sequencias)
+
+# Define the colors for visualization
+cores <- c("1" = "yellow", "2" = "orange", "3" = "red", "4" = "purple",
+           "5" = "blue", "6" = "green", "7" = "black", "0" = "white")
+
+# Visualize the result
+levelplot(classified_stack, col.regions = cores)
+
+# Define the path to the folder where the rasters will be saved
+caminho_pasta <- "G:/Meu Drive/GEE/RF_SENTINEL_1A_2AB_RJ/Classificação_RF_GEE/soma"
+
+# Name the trajectory raster
+nome_raster <- "trajetoria_Verde_0_3_4_7_10_12-35_36_seq_continua.tif"
+
+# Complete path for the raster
+output_raster <- file.path(caminho_pasta, nome_raster)
+
+# Save the trajectory raster
+writeRaster(classified_stack, output_raster, format = "GTiff", overwrite = TRUE)
+   
